@@ -225,42 +225,39 @@ afq.params.track.offsetJitter = 0;
 afq.params.track.seedVoxelOffsets = [0.25 0.75];
 % Mask from which to initialize tracking
 afq.params.track.faMaskThresh = 0.30;
-
+% Set some mrtrix specific parameters (only computeCSD==1)
+% If mrtrix is installed and CSD is to be computed then perform tracking 
+% on constrained spherical deconvolution
+afq.params.track.algorithm = 'mrtrix';
+% Parameters relevant to mrTrix.
+% Beware, the code is being maintained for both mrTrix2 and mrTrix3.
+% Consider that mrTrix2 is called obsolete by the developers, with no updates
+% http://community.mrtrix.org/t/mrtrix-tutorial-error/141
+% Function names change, and there are many new options in mrTrix3.
+% Number of fibers to track. This parameter is only relevant for mrTrix
+afq.params.track.nfibers = 500000; 
+% Choose algorithm for tracking with mrTrix
+% Options if you have version 2:
+%    'probabilistic tractography': 'SD_PROB'
+%    'deterministic tractogrpahy based on spherical deconvolution': 'SD_STREAM'
+%    'deterministic tractogrpahy based on a tensor model': 'DT_STREAM'
+% Options if you have version 3:
+%     FACT, iFOD1, iFOD2, Nulldist1, Nulldist2, SD_Stream,
+%                         Seedtest, Tensor_Det, Tensor_Prob (default: iFOD2).
+afq.params.track.mrTrixAlgo = 'iFOD2';
+% Specify here if you want multishell true or false.
+afq.params.track.multishell = true;
+% In case you are using multishell, specify the tool to be used for 5ttgen
+% script. If you use 'fsl', it will segment the T1 you provided in the
+% beginning. If you use 'freesurfer', you should provide any 'aseg' file
+% provided by the freesurfer pipeline, tested with aparc+aseg.mgz
+afq.params.track.tool = 'freesurfer'; 
+    
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Modify default parameters based on user input                          %
 afq = afqVarargin(afq, varargin);                                         %
 afq.params = afqVarargin(afq.params, varargin);     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%% Set some mrtrix specific parameters (only computeCSD==1)
-% If mr trix is installed and CSD is to be computed then perform tracking 
-% on constrained spherical deconvolution
-if afq.software.mrtrix == 1 && afq.params.computeCSD > 0
-    afq.params.track.algorithm = 'mrtrix';
-    % Parameters relevant to mrTrix.
-    % Beware, the code is being maintained for both mrTrix2 and mrTrix3.
-    % Consider that mrTrix2 is called obsolete by the developers, with no updates
-    % http://community.mrtrix.org/t/mrtrix-tutorial-error/141
-    % Function names change, and there are many new options in mrTrix3.
-    % Number of fibers to track. This parameter is only relevant for mrTrix
-    afq.params.track.nfibers = 500000; 
-    % Choose algorithm for tracking with mrTrix
-    % Options if you have version 2:
-    %    'probabilistic tractography': 'SD_PROB'
-    %    'deterministic tractogrpahy based on spherical deconvolution': 'SD_STREAM'
-    %    'deterministic tractogrpahy based on a tensor model': 'DT_STREAM'
-    % Options if you have version 3:
-    %     FACT, iFOD1, iFOD2, Nulldist1, Nulldist2, SD_Stream,
-    %                         Seedtest, Tensor_Det, Tensor_Prob (default: iFOD2).
-    afq.params.track.mrTrixAlgo = 'iFOD2';
-    % Specify here if you want multishell true or false.
-    afq.params.track.multishell = true;
-    % In case you are using multishell, specify the tool to be used for 5ttgen
-    % script. If you use 'fsl', it will segment the T1 you provided in the
-    % beginning. If you use 'freesurfer', you should provide any 'aseg' file
-    % provided by the freesurfer pipeline, tested with aparc+aseg.mgz
-    afq.params.track.tool = 'freesurfer';  
-end
 
 % TODO:
 %  Write a parameter translation routine based on mrvParamFormat()

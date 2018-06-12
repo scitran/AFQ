@@ -38,47 +38,76 @@ function files = AFQ_mrtrixInit(dt6, ...
 % For details: 
 % http://www.brain.org.au/software/mrtrix/tractography/preprocess.html
 % 
+% Update GLU 2018.06:
+% When trying to dockerize it, it is not working as some of the paths of
+% the dt6 come hardcoded. Edit it to make everything relative paths 
 
 
 if notDefined('mrtrix_folder'), mrtrix_folder = 'mrtrix'; end
 if notDefined('lmax'), lmax = 4; end
+if notDefined('tool'), tool = 'freesurfer'; end
+if notDefined('multishell'), multishell = false; end
+if notDefined('mrtrixVersion'), mrtrixVersion = 3; end
+
 % Loading the dt file containing all the paths to the fiels we need.
 dt_info = load(dt6);
 
-% Check if this is correct, dt_info.files has some relative and absolute
-% paths, it doesn't make sense. 
-% I cannot recover the position of my original t1 from this information, so I
-% copied it to the 'session' folder, in SubName/dmri 
-%                 b0: 'dti90trilin/bin/b0.nii.gz'
-%          brainMask: 'dti90trilin/bin/brainMask.nii.gz'
-%             wmMask: 'dti90trilin/bin/wmMask.nii.gz'
-%            tensors: 'dti90trilin/bin/tensors.nii.gz'
-%                gof: 'dti90trilin/bin/gof.nii.gz'
-%           outliers: 'dti90trilin/bin/outliers.nii.gz'
-%                 t1: 't1_std_acpc.nii.gz'
-%       alignedDwRaw: '/bcbl/home/public/Gari/MINI/ANALYSIS/DWI/S002/dmri/data_aligned_...'
-%     alignedDwBvecs: '/bcbl/home/public/Gari/MINI/ANALYSIS/DWI/S002/dmri/data_aligned_...'
-%     alignedDwBvals: '/bcbl/home/public/Gari/MINI/ANALYSIS/DWI/S002/dmri/data_aligned_...'
+%{
+Check if this is correct, dt_info.files has some relative and absolute
+paths, it doesn't make sense. 
+I cannot recover the position of my original t1 from this information, so I
+copied it to the 'session' folder, in SubName/dmri 
+                b0: 'dti90trilin/bin/b0.nii.gz'
+         brainMask: 'dti90trilin/bin/brainMask.nii.gz'
+            wmMask: 'dti90trilin/bin/wmMask.nii.gz'
+           tensors: 'dti90trilin/bin/tensors.nii.gz'
+               gof: 'dti90trilin/bin/gof.nii.gz'
+          outliers: 'dti90trilin/bin/outliers.nii.gz'
+                t1: 't1_std_acpc.nii.gz'
+      alignedDwRaw: '/bcbl/home/public/Gari/MINI/ANALYSIS/DWI/S002/dmri/data_aligned_...'
+    alignedDwBvecs: '/bcbl/home/public/Gari/MINI/ANALYSIS/DWI/S002/dmri/data_aligned_...'
+    alignedDwBvals: '/bcbl/home/public/Gari/MINI/ANALYSIS/DWI/S002/dmri/data_aligned_...'
 
 
-% Note GLU: this code is assuming there is a 'raw' folder. In my case there
-% is, but only with the original .nii-s converted from dicoms and the bvecs
-% and bvals. The t1-s are in other path with the rest of the anat files.
-% Furthermore, the assumption that the 'raw' file is above the dt6 filename
-% breaks the code as it is duplicating the whole pathnames. 
-% Example: mrtrix_dir = /bcbl/home/public/Gari/MINI/ANALYSIS/DWI/S002//bcbl/home/public/Gari/MINI/ANALYSIS/DWI/S002/dmri/dti90trilin/mrtrixi/
-% I fixed this (anf the initial part of the name issue as well)
-% I still don't understand the use case. I understand that the mrtrix
-% folder should be at the same level as the dt6.mat file, which defines
-% every subject analysis, so using the bde_ code, it should be below the
-% dti90trilin folder. I understand that the piece of filename that wants to
-% be saved is the 'data_aligned_trilin_noMEC' part.
+Note GLU: this code is assuming there is a 'raw' folder. In my case there
+is, but only with the original .nii-s converted from dicoms and the bvecs
+and bvals. The t1-s are in other path with the rest of the anat files.
+Furthermore, the assumption that the 'raw' file is above the dt6 filename
+breaks the code as it is duplicating the whole pathnames. 
+Example: mrtrix_dir = /bcbl/home/public/Gari/MINI/ANALYSIS/DWI/S002//bcbl/home/public/Gari/MINI/ANALYSIS/DWI/S002/dmri/dti90trilin/mrtrixi/
+I fixed this (anf the initial part of the name issue as well)
+I still don't understand the use case. I understand that the mrtrix
+folder should be at the same level as the dt6.mat file, which defines
+every subject analysis, so using the bde_ code, it should be below the
+dti90trilin folder. I understand that the piece of filename that wants to
+be saved is the 'data_aligned_trilin_noMEC' part.
+%}
 
+
+% Check if the dt6 coming from the dtiinit GEAR and the afq GEAR are
+% running in the same space. Otherwise fix the paths
+dt6Parts = split(dt_info.files.alignedDwRaw, filesep);
+mrtrixFolderParts  = split(mrtrix_folder, filesep);
+% If the first element is different, assume that they come from different
+% spaces, recreate the folders and filenames
+if ~strcmp(dt6Parts{2}, mrtrixFolderParts{2})
+    warning('DtiInit and AFQ have been processed in different environments')
+end
+
+
+% Obtain the session name. This is usually the zip name if it has not
+% been edited. 
+SessionDir = strjoin(mrtrixFolderParts(1:(length(mrtrixFolderParts)-2)), filesep)
+% This is where the dt6 is located
+AnalysisDir = fileparts(dt6);
+AnalysisDir2 = strjoin(mrtrixFolderParts(1:(length(mrtrixFolderParts)-1)), filesep);
+% Not very useful sanity check:
+if ~strcmp(AnalysisDir, AnalysisDir2); error('Check all the path mess for mrtrix files...'); end
 
 % Strip the file names out of the dt6 strings. 
 % dwRawFile = dt_info.files.alignedDwRaw;
-dwRawFile = fullfile(dt_info.params.rawDataDir, strcat(dt_info.params.rawDataFile,'.gz'));
-
+% dwRawFile = fullfile(dt_info.params.rawDataDir, strcat(dt_info.params.rawDataFile,'.gz'));
+dwRawFile = fullfile(SessionDir, strcat(dt_info.params.rawDataFile,'.gz'));
 
 % This line removes the extension of the file (.nii.gz) and mainaints de path
 fname_trunk = dwRawFile(1:strfind(dwRawFile,'.')-1);
@@ -90,8 +119,9 @@ fname_trunk = dwRawFile(1:strfind(dwRawFile,'.')-1);
 mrtrix_dir = mrtrix_folder;
 
 % Assuming in 'session' we want the subject_name/dmri64 or whatever
-% session = pathDwRawFile;
-session = dt_info.params.rawDataDir;
+session = pathDwRawFile;
+% session = dt_info.params.rawDataDir;
+
 % And in fname_trunk we want the whole path and the beginning of the
 % filename
 fname_trunk = [mrtrix_folder filesep fnameDwRawFile]; 
@@ -118,10 +148,16 @@ end
 
 % This file contains both bvecs and bvals, as per convention of mrtrix
 % if (~computed.('b'))
-    bvecs = fullfile(dt_info.params.rawDataDir, strcat(fnameDwRawFile, '.bvecs'));
-    bvals = fullfile(dt_info.params.rawDataDir, strcat(fnameDwRawFile, '.bvals'));
+%    bvecs = fullfile(dt_info.params.rawDataDir, strcat(fnameDwRawFile, '.bvecs'));
+%    bvals = fullfile(dt_info.params.rawDataDir, strcat(fnameDwRawFile, '.bvals'));
 %   bvecs = dt_info.files.alignedDwBvecs;
 %   bvals = dt_info.files.alignedDwBvals;
+[bvecPath bvecName bvecExt] = fileparts(dt_info.files.alignedDwBvecs);
+[bvalPath bvalName bvalExt] = fileparts(dt_info.files.alignedDwBvals);
+bvecs = fullfile(session, [bvecName bvecExt]);
+bvals = fullfile(session, [bvalName bvalExt]);
+
+
     mrtrix_bfileFromBvecs(bvecs, bvals, files.b);
 % end
 

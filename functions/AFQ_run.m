@@ -316,7 +316,7 @@ for ii = runsubs
     
     % clear the files that were computed for this subject
     clear fg fg_classified TractProfile
-end
+end  % Ends runsubs
 
 %% Compute Control Group Norms
 
