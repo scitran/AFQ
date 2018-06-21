@@ -140,9 +140,13 @@ for ii = runsubs
         mkdir(fibDir);
     end 
     % Check if wholebrain tractography should be done
-    if AFQ_get(afq, 'do tracking',ii) == 1
+    if AFQ_get(afq, 'do tracking', ii) == 1
         % Perform whole-brain tractography
         fprintf('\nPerforming whole-brain tractograpy for subject %s\n',sub_dirs{ii});
+        
+        % TODO GLU: here we should add an option to clean data with LiFE or
+        % not. Now it will do it by default. fg will be the fibers after
+        % LiFE have been run and the 0 weighted fibers have been removed
         fg = AFQ_WholebrainTractography(dt, afq.params.run_mode, afq);
         % Save fiber group to fibers directory
         dtiWriteFiberGroup(fg,fullfile(fibDir,'WholeBrainFG.mat'));
