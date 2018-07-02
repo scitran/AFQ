@@ -8,9 +8,11 @@ function [status, results, fg, pathstr] = AFQ_mrtrix_track(files, ...
     clobber, ...
     mrtrixVersion, ...
     multishell, ...
+    life_runLife, ...    
     life_discretization, ...
     life_num_iterations, ...
-    life_test)
+    life_test, ...
+    life_saveOutput)
 %
 % function [status, results, fg, pathstr] = mrtrix_track(files, roi, mask, algo, nSeeds, bkgrnd, verbose)
 %
@@ -47,9 +49,11 @@ if notDefined('bkgrnd'),    bkgrnd = false;end
 if notDefined('clobber'),  clobber = false;end
 if notDefined('mrtrixVersion'),    mrtrixVersion = 3;end
 if notDefined('multishell'),  multishell = false;end
+if notDefined('life_runLife'), life_runLife = true; end
 if notDefined('life_discretization'), life_discretization = 360; end
-if notDefined('life_num_iterations'), life_num_iterations = 500; end
+if notDefined('life_num_iterations'), life_num_iterations = 100; end
 if notDefined('life_test'), life_test = false; end
+if notDefined('life_saveOutput'), life_saveOutput = false; end
 
 % REMOVE THIS IN THE REVIEW
 % See AFQ_Create, as indicated by Jason I included the algo in the creation
@@ -235,44 +239,51 @@ config.life_discretization = life_discretization;
 config.num_iterations      = life_num_iterations;
 config.test                = life_test;
 
+if life_runLife
+    % Change dir to LIFEDIR so that it writes everything there
+    if ~exist(lifedir); mkdir(lifedir); end;
+    cd(lifedir)
 
-% Change dir to LIFEDIR so that it writes everything there
-if ~exist(lifedir); mkdir(lifedir); end;
-cd(lifedir)
+    disp('loading dt6.mat')
+    disp(['Looking for file: ' fullfile(config.dtiinit, 'dt6.mat')])
+    dt6 = load(fullfile(config.dtiinit, 'dt6.mat'))
+    [~,NAME,EXT] = fileparts(dt6.files.alignedDwRaw);
+    aligned_dwi = fullfile(sessionDir, [NAME,EXT])
 
-disp('loading dt6.mat')
-disp(['Looking for file: ' fullfile(config.dtiinit, 'dt6.mat')])
-dt6 = load(fullfile(config.dtiinit, 'dt6.mat'))
-[~,NAME,EXT] = fileparts(dt6.files.alignedDwRaw);
-aligned_dwi = fullfile(sessionDir, [NAME,EXT])
+    [ fe, out ] = life(config, aligned_dwi);
 
-[ fe, out ] = life(config, aligned_dwi);
+    out.stats.input_tracks = length(fe.fg.fibers);
+    out.stats.non0_tracks = length(find(fe.life.fit.weights > 0));
+    fprintf('number of original tracks	: %d\n', out.stats.input_tracks);
+    fprintf('number of non-0 weight tracks	: %d (%f)\n', out.stats.non0_tracks, out.stats.non0_tracks / out.stats.input_tracks*100);
 
-out.stats.input_tracks = length(fe.fg.fibers);
-out.stats.non0_tracks = length(find(fe.life.fit.weights > 0));
-fprintf('number of original tracks	: %d\n', out.stats.input_tracks);
-fprintf('number of non-0 weight tracks	: %d (%f)\n', out.stats.non0_tracks, out.stats.non0_tracks / out.stats.input_tracks*100);
+    if life_saveOutput
+        disp('writing outputs')
+        save('LiFE_fe.mat' ,'fe' , '-v7.3');
+        save('LiFE_out.mat','out', '-v7.3');
+    else
+        disp('User selected not to write LiFE output')
+    end
 
-disp('writing outputs')
-save('LiFE_fe.mat' ,'fe' , '-v7.3');
-save('LiFE_out.mat','out', '-v7.3');
-
-
-% This is what we want to pass around
-fg = out.life.fg;
-
+    % This is what we want to pass around
+    fg = out.life.fg;
 
 
+    % Convert the .tck fibers created by mrtrix to mrDiffusion/Quench format (pdb):
+    % We will write both, but we want the cleaned ones to be used by vOF or any
+    % other downstream code
+    pdb_file_LifeFalse = fullfile(pathstr,strcat(strip_ext(tck_file), '_noLiFE.pdb'));
+    pdb_file_LifeTrue = fullfile(pathstr,strcat(strip_ext(tck_file), '.pdb'));
+
+    mrtrix_tck2pdb(tck_file, pdb_file_LifeFalse);
+    mtrExportFibers(fg, pdb_file_LifeTrue, eye(4)); 
+else
+    % Convert the .tck fibers created by mrtrix to mrDiffusion/Quench format (pdb):
+    pdb_file = fullfile(pathstr,strcat(strip_ext(tck_file), '.pdb'));
+    fg = mrtrix_tck2pdb(tck_file, pdb_file);
+end
 
 
-% Convert the .tck fibers created by mrtrix to mrDiffusion/Quench format (pdb):
-% We will write both, but we want the cleaned ones to be used by vOF or any
-% other downstream code
-pdb_file_LifeFalse = fullfile(pathstr,strcat(strip_ext(tck_file), '_noLiFE.pdb'));
-pdb_file_LifeTrue = fullfile(pathstr,strcat(strip_ext(tck_file), '.pdb'));
-
-mrtrix_tck2pdb(tck_file, pdb_file_LifeFalse);
-mtrExportFibers(fg, pdb_file_LifeTrue, eye(4)); 
 
 end
 
