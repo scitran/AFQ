@@ -12,7 +12,12 @@ function [status, results, fg, pathstr] = AFQ_mrtrix_track(files, ...
     life_discretization, ...
     life_num_iterations, ...
     life_test, ...
-    life_saveOutput)
+    life_saveOutput, ...
+    ET_runET, ...
+    ET_numberFibers, ...
+    ET_angleValues, ...
+    ET_minlength, ...
+    ET_maxlength)
 %
 % function [status, results, fg, pathstr] = mrtrix_track(files, roi, mask, algo, nSeeds, bkgrnd, verbose)
 %
@@ -42,6 +47,7 @@ function [status, results, fg, pathstr] = AFQ_mrtrix_track(files, ...
 % Edit GLU 06.2018 Added Life: after we get the tck we run it through the LiFE pipeline, so that 
 % the fiber cleaning is done in origin. Then it is the cleaned WholeBrain
 % converted to pdb and continues the normal afq pipeline.
+% Edit GLU 08.2018: added Ensemble Tractography
 
 status = 0; results = [];
 if notDefined('verbose'),  verbose = false;end
@@ -49,11 +55,18 @@ if notDefined('bkgrnd'),    bkgrnd = false;end
 if notDefined('clobber'),  clobber = false;end
 if notDefined('mrtrixVersion'),    mrtrixVersion = 3;end
 if notDefined('multishell'),  multishell = false;end
+% LiFE
 if notDefined('life_runLife'), life_runLife = true; end
 if notDefined('life_discretization'), life_discretization = 360; end
 if notDefined('life_num_iterations'), life_num_iterations = 100; end
 if notDefined('life_test'), life_test = false; end
 if notDefined('life_saveOutput'), life_saveOutput = false; end
+% Ensemble Tractography
+if notDefined('ET_runET'), ET_runET = true; end
+if notDefined('ET_numberFibers'), ET_numberFibers = 100000; end
+if notDefined('ET_angleValues'), ET_angleValues = [47.2, 23.1, 11.5, 5.7, 2.9]; end
+if notDefined('ET_minlength'), ET_minlength = 10; end
+if notDefined('ET_maxlength'), ET_maxlength = 250; end
 
 % REMOVE THIS IN THE REVIEW
 % See AFQ_Create, as indicated by Jason I included the algo in the creation
@@ -212,11 +225,45 @@ end
 
 
 
-% Track using the command in the UNIX terminal
-if ~(exist(tck_file,'file') ==2)  || clobber == 1
-    [status,results] = AFQ_mrtrix_cmd(cmd_str, bkgrnd, verbose,mrtrixVersion);
+
+% HERE ADD Ensemble Tractography (ET)
+% ET was added after LiFE was added
+
+if ET_runET && (mrtrixVersion == 3) && strcmp(algo, 'iFOD2') && ~multishell
+    disp('Running Ensemble Tractography with mrTrix3, iFOD2, not multishell data.');
+    numconcatenate = [];
+    for na=1:length(ET_angleValues)
+        fgFileName{na}=['fibs' num2str(ET_numberFibers) '_angle' strrep(num2str(ET_angleValues(na)),'.','p') '.tck'];
+        fgFileNameWithDir{na}=fullfile(fileparts(tck_file), fgFileName{na});
+        cmd_str = ['tckgen ' files.csd ' ' ...
+                    '-algo ' algo ' ' ...
+                    '-seed_image ' roi ' ' ...
+                    '-mask ' mask ' ' ...
+                    '-minlength ' num2str(ET_minlength) ' ' ...
+                    '-maxlength ' num2str(ET_maxlength) ' ' ...
+                    '-angle ' num2str(ET_angleValues(na)) ' ' ...
+                    '-select ' num2str(ET_numberFibers) ' ' ...
+                    fgFileNameWithDir{na} ' ' ...
+                    '-force'];
+        % Run it 
+        [status,results] = AFQ_mrtrix_cmd(cmd_str, bkgrnd, verbose,mrtrixVersion);
+        numconcatenate = [numconcatenate, ET_numberFibers];
+    end
+    
+    % Read, merge, write .mat and .tck file
+    % [PATHSTR,NAME,EXT] = fileparts(tck_file);
+    % fname = 'NHP_pUM_ETCall_8million_cand.mat';
+    et_concatenateconnectomes(fgFileNameWithDir, tck_file, numconcatenate, 'tck'); 
+    
 else
-    fprintf('\nFound fiber tract file: %s.\n Loading it rather than retracking',tck_file)
+    fprintf('Running default tracking without Ensemble tractography and mrTrix%d\n', mrtrixVersion);
+    
+    % Track using the command in the UNIX terminal
+    if ~(exist(tck_file,'file') ==2)  || clobber == 1
+        [status,results] = AFQ_mrtrix_cmd(cmd_str, bkgrnd, verbose, mrtrixVersion);
+    else
+        fprintf('\nFound fiber tract file: %s.\n Loading it rather than retracking', tck_file)
+    end 
 end
 
 
