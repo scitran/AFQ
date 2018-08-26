@@ -13,6 +13,7 @@ function [status, results, fg, pathstr] = AFQ_mrtrix_track(files, ...
     life_num_iterations, ...
     life_test, ...
     life_saveOutput, ...
+    life_writePDB, ...
     ET_runET, ...
     ET_numberFibers, ...
     ET_angleValues, ...
@@ -61,6 +62,7 @@ if notDefined('life_discretization'), life_discretization = 360; end
 if notDefined('life_num_iterations'), life_num_iterations = 100; end
 if notDefined('life_test'), life_test = false; end
 if notDefined('life_saveOutput'), life_saveOutput = false; end
+if notDefined('life_writePDB'), life_writePDB = false; end
 % Ensemble Tractography
 if notDefined('ET_runET'), ET_runET = true; end
 if notDefined('ET_numberFibers'), ET_numberFibers = 100000; end
@@ -321,9 +323,11 @@ if life_runLife
     % other downstream code
     pdb_file_LifeFalse = fullfile(pathstr,strcat(strip_ext(tck_file), '_noLiFE.pdb'));
     pdb_file_LifeTrue = fullfile(pathstr,strcat(strip_ext(tck_file), '.pdb'));
-
-    mrtrix_tck2pdb(tck_file, pdb_file_LifeFalse);
-    mtrExportFibers(fg, pdb_file_LifeTrue, eye(4)); 
+    
+    if life_writePDB
+        mrtrix_tck2pdb(tck_file, pdb_file_LifeFalse);
+        mtrExportFibers(fg, pdb_file_LifeTrue, eye(4)); 
+    end
 else
     % Convert the .tck fibers created by mrtrix to mrDiffusion/Quench format (pdb):
     pdb_file = fullfile(pathstr,strcat(strip_ext(tck_file), '.pdb'));

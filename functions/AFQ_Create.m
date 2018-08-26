@@ -327,7 +327,9 @@ if AFQ_get(afq,'use mrtrix')
         mrtrixdir = fullfile(afq.sub_dirs{ii},'mrtrix');
         if ~exist(mrtrixdir,'dir'),mkdir(mrtrixdir);end
         % Get the lmax from the afq structure
-        lmax = AFQ_get(afq,'lmax');
+        % lmax = AFQ_get(afq,'lmax');
+        % Obtain the lmax from the bvalues, no need to set up, calculate
+        lmax = AFQ_calculateLmaxFrombvals(AFQ_get(afq, 'dt6path',ii));
         
         files = AFQ_mrtrixInit(AFQ_get(afq, 'dt6path',ii), ...
                                lmax,...
