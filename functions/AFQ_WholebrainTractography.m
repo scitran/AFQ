@@ -26,6 +26,13 @@ function fg = AFQ_WholebrainTractography(dt, run_mode, params)
 % We set some reasonable defaults if a parameters structure was not passed
 % into the fuction
 if ~exist('params','var') || isempty(params)
+    
+    % Maybe it is better that when there is no defaults, stop it. 
+    % Maybe I am not aware that my parameters are not arriving properly,
+    % I think it is better to receive an error, and to pass all the parameters
+    % always in the config.json files, then you can check what the params
+    % are and to try to understand them, otherwise it just works
+    %{
     % This defines which voxels will be seeded for tractography.
     if ~exist('run_mode','var') || isempty(run_mode)
         opts.faMaskThresh = 0.30;
@@ -66,6 +73,8 @@ if ~exist('params','var') || isempty(params)
     % Tracking nfibers and algo to use with mrTrix (the default is for mrTrix3)
     opts.nfibers = 500000;
     opts.mrTrixAlgo = 'iFOD2';
+    %}
+    error('Whole Brain TRact. is not receiving params, review it please')
 elseif isafq(params)
     % If an afq structure is passed in get the tracking parameters and also
     % check if tracking should be done based on CSD with mrtrix
