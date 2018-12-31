@@ -233,26 +233,36 @@ if ET_runET && (mrtrixVersion == 3) && strcmp(algo, 'iFOD2') && ~multishell
     numconcatenate = [];
     for na=1:length(ET_angleValues)
         fgFileName{na}=['fibs' num2str(ET_numberFibers) '_angle' strrep(num2str(ET_angleValues(na)),'.','p') '.tck'];
-        fgFileNameWithDir{na}=fullfile(fileparts(tck_file), fgFileName{na});
-        cmd_str = ['tckgen ' files.csd ' ' ...
-                    '-algo ' algo ' ' ...
-                    '-seed_image ' roi ' ' ...
-                    '-mask ' mask ' ' ...
-                    '-minlength ' num2str(ET_minlength) ' ' ...
-                    '-maxlength ' num2str(ET_maxlength) ' ' ...
-                    '-angle ' num2str(ET_angleValues(na)) ' ' ...
-                    '-select ' num2str(ET_numberFibers) ' ' ...
-                    fgFileNameWithDir{na} ' ' ...
-                    '-force'];
-        % Run it 
-        [status,results] = AFQ_mrtrix_cmd(cmd_str, bkgrnd, verbose,mrtrixVersion);
+        
+        fgFileNameWithDir{na}=fullfile('/Volumes/group/users/glerma/TESTDATA/AFQ/output/MareikeS03/afq_25-Dec-2018_06h12m59s/dti96trilin/mrtrix', ...
+                              fgFileName{na});
+        % fgFileNameWithDir{na}=fullfile(fileparts(tck_file), fgFileName{na});
+%         cmd_str = ['tckgen ' files.csd ' ' ...
+%                     '-algo ' algo ' ' ...
+%                     '-seed_image ' roi ' ' ...
+%                     '-mask ' mask ' ' ...
+%                     '-minlength ' num2str(ET_minlength) ' ' ...
+%                     '-maxlength ' num2str(ET_maxlength) ' ' ...
+%                     '-angle ' num2str(ET_angleValues(na)) ' ' ...
+%                     '-select ' num2str(ET_numberFibers) ' ' ...
+%                     fgFileNameWithDir{na} ' ' ...
+%                     '-force'];
+%         % Run it, if the file is not there (this is for debugging)
+%         if ~exist(fgFileNameWithDir{na},'file')
+%             [status,results] = AFQ_mrtrix_cmd(cmd_str, bkgrnd, verbose,mrtrixVersion);
+%         end
         numconcatenate = [numconcatenate, ET_numberFibers];
     end
     
     % Read, merge, write .mat and .tck file
     % [PATHSTR,NAME,EXT] = fileparts(tck_file);
     % fname = 'NHP_pUM_ETCall_8million_cand.mat';
-    et_concatenateconnectomes(fgFileNameWithDir, tck_file, numconcatenate, 'tck'); 
+    
+    
+    
+    
+    % FIX THIS TO MAKE IT WRITE mrtrix tracks intead of mrtrix fibers
+    fg = et_concatenateconnectomes(fgFileNameWithDir, tck_file, numconcatenate, 'tck'); 
     
 else
     fprintf('Running default tracking without Ensemble tractography and mrTrix%d\n', mrtrixVersion);
@@ -313,22 +323,27 @@ if life_runLife
 
     % This is what we want to pass around
     fg = out.life.fg;
+    % And I think I would need to write and substitute the non cleaned ET
+    % tractogram tck with the new one...
+    % Write file
+    fgWrite(fg, tck_file, 'tck');
+end
 
 
+% This is the final output. Decide if we need the pdb output. 
+% It was removed because it was requiring huge amounts of RAM.
+% It can break an otherwise working gear. 
+% In any case, this should not affect the output, we want to pass fg to parent
+% function
+% The variable will still be called life_writePDB, though...
+if life_writePDB
     % Convert the .tck fibers created by mrtrix to mrDiffusion/Quench format (pdb):
     % We will write both, but we want the cleaned ones to be used by vOF or any
     % other downstream code
     pdb_file_LifeFalse = fullfile(pathstr,strcat(strip_ext(tck_file), '_noLiFE.pdb'));
     pdb_file_LifeTrue = fullfile(pathstr,strcat(strip_ext(tck_file), '.pdb'));
-    
-    if life_writePDB
-        mrtrix_tck2pdb(tck_file, pdb_file_LifeFalse);
-        mtrExportFibers(fg, pdb_file_LifeTrue, eye(4)); 
-    end
-else
-    % Convert the .tck fibers created by mrtrix to mrDiffusion/Quench format (pdb):
-    pdb_file = fullfile(pathstr,strcat(strip_ext(tck_file), '.pdb'));
-    fg = mrtrix_tck2pdb(tck_file, pdb_file);
+    mrtrix_tck2pdb(tck_file, pdb_file_LifeFalse);
+    mtrExportFibers(fg, pdb_file_LifeTrue, eye(4)); 
 end
 
 
