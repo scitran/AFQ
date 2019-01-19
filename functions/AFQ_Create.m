@@ -246,7 +246,7 @@ afq.params.track.nfibers = 500000;
 %                         Seedtest, Tensor_Det, Tensor_Prob (default: iFOD2).
 afq.params.track.mrTrixAlgo = 'iFOD2';
 % Specify here if you want multishell true or false.
-afq.params.track.multishell = true;
+afq.params.track.multishell = false;
 % In case you are using multishell, specify the tool to be used for 5ttgen
 % script. If you use 'fsl', it will segment the T1 you provided in the
 % beginning. If you use 'freesurfer', you should provide any 'aseg' file
@@ -329,14 +329,18 @@ if AFQ_get(afq,'use mrtrix')
         % Get the lmax from the afq structure
         % lmax = AFQ_get(afq,'lmax');
         % Obtain the lmax from the bvalues, no need to set up, calculate
-        lmax = AFQ_calculateLmaxFrombvals(AFQ_get(afq, 'dt6path',ii));
-        
+        if afq.params.track.mrtrix_autolmax
+            lmax = AFQ_calculateLmaxFrombvals(AFQ_get(afq, 'dt6path',ii));
+        else
+            lmax = afq.params.track.mrtrix_lmax;
+        end
         files = AFQ_mrtrixInit(AFQ_get(afq, 'dt6path',ii), ...
                                lmax,...
                                mrtrixdir,...
                                afq.software.mrtrixVersion, ...
                                afq.params.track.multishell, ... % true/false
-                               afq.params.track.tool); % 'fsl', 'freesurfer'
+                               afq.params.track.tool, ... % 'fsl', 'freesurfer'
+                               afq.params.track.faMaskThresh);
         % In order to not modify much the previous code, I created new
         % files types. 
         % In mrTrix2 and mrTrix3 not-multishell, files.wm was the wm mask,
@@ -350,13 +354,18 @@ if AFQ_get(afq,'use mrtrix')
         % wm = wmMask for tractography, wmMask as seed_image
         % and tt5 for -act (instead of -mask)
 
-        if ~afq.params.track.multishell
-            afq.files.mrtrix.csd{ii} = files.csd;
-            afq.files.mrtrix.wm{ii} = files.wmMask;
+        if afq.params.track.multishell
+            afq.files.mrtrix.csd{ii}   = files.wmCsd;
+            afq.files.mrtrix.wm{ii}    = files.wmMask;
+            afq.files.mrtrix.tt5{ii}   = files.tt5;
+            afq.files.mrtrix.gmwmi{ii} = files.gmwmi;
         else
-            afq.files.mrtrix.csd{ii} = files.wmCsd;
-            afq.files.mrtrix.wm{ii} = files.wmMask;
-            afq.files.mrtrix.tt5{ii} = files.tt5;
+            afq.files.mrtrix.csd{ii}   = files.csd;
+            afq.files.mrtrix.wm{ii}    = files.wmMask;
+            afq.files.mrtrix.wm_dilated{ii}    = files.wmMask_dilated;
+            afq.files.mrtrix.tt5{ii}   = files.tt5;
+            afq.files.mrtrix.gmwmi{ii} = files.gmwmi;
+
         end
     end
 end

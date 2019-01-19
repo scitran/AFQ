@@ -1,4 +1,4 @@
-function [fg keep]=AFQ_removeFiberOutliers(fg,maxDist,maxLen,numNodes,M,count,maxIter,show)
+function [fg, keep, SuperFiber]=AFQ_removeFiberOutliers(fg,maxDist,maxLen,numNodes,M,count,maxIter,show)
 % Remove fibers from a fiber group that differ substantially from the
 % mean fiber in the group.
 %

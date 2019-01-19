@@ -84,5 +84,5 @@ else
 end
  
 %% (5) Save tract
-fgWrite(fgsegment2, tractname);
+AFQ_fgWrite(fgsegment2, tractname);
 

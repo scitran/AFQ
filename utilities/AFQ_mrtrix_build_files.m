@@ -1,4 +1,4 @@
-function files = mrtrix_build_files(fname_trunk,lmax,multishell)
+function files = AFQ_mrtrix_build_files(fname_trunk,lmax,multishell)
 % Builds a structure with the names of the files that the MRtrix commands
 % will generate and need.
 %
@@ -6,7 +6,7 @@ function files = mrtrix_build_files(fname_trunk,lmax,multishell)
 %
 % Franco Pestilli, Ariel Rokem, Bob Dougherty Stanford University
 % GLU July.2016 added the T1 and tt5 file types
-
+% GLU Jan.2019 added gmwmi and take it out with 5tt file
 
 % Convert the raw dwi data to the mrtrix format: 
 files.dwi = strcat(fname_trunk,'_dwi.mif');
@@ -15,7 +15,9 @@ files.dwi = strcat(fname_trunk,'_dwi.mif');
 files.b     = strcat(fname_trunk, '.b');
 
 % Convert the brain mask from mrDiffusion into a .mif file: 
-files.brainmask = strcat(fname_trunk,'_brainmask.mif');
+files.brainmask         = strcat(fname_trunk,'_brainmask.mif'); 
+files.brainmask_dilated = strcat(fname_trunk,'_brainmask_dilated.mif');
+files.brainmask_eroded  = strcat(fname_trunk,'_brainmask_eroded.mif');
 
 % Generate diffusion tensors:
 files.dt = strcat(fname_trunk, '_dt.mif');
@@ -30,16 +32,20 @@ files.ev = strcat(fname_trunk, '_ev.mif');
 files.sf = strcat(fname_trunk, '_sf.mif');
 files.response = strcat(fname_trunk, '_response.txt');
 
-% Create a white-matter mask, tracktography will act only in here.
-files.wmMask    = strcat(fname_trunk, '_wmMask.mif');
+% Create a white-matter mask
+files.wmMask         = strcat(fname_trunk, '_wmMask.mif');
+files.wmMask_dilated = strcat(fname_trunk, '_wmMask_dilated.mif');
 
 % Compute the CSD estimates: 
 files.csd = strcat(fname_trunk, sprintf('_csd_lmax%i.mif',lmax)); 
 
 
-if multishell
+% This was inside the if before. Now create the 5tt files no matter what
     % Create tissue type segmentation to be used in multishell: 
-    files.tt5 = strcat(fname_trunk, '_5tt.mif');
+    files.tt5   = strcat(fname_trunk, '_5tt.mif');
+    files.gmwmi = strcat(fname_trunk, '_gmwmi.mif');
+
+if multishell
     % Create per tissue type response file
     files.wmResponse = strcat(fname_trunk, '_wmResponse.txt');
     files.gmResponse = strcat(fname_trunk, '_gmResponse.txt');
@@ -51,4 +57,6 @@ if multishell
     % RGB tissue signal contribution maps
     files.vf = strcat(fname_trunk, '_vf.mif');
 end
+
+
 end

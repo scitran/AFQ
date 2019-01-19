@@ -314,9 +314,9 @@ switch(param)
     case{'mrtrixpath' 'mrtrixpaths'}
         val.csd = afq.files.mrtrix.csd{varargin{1}};
         val.wm  = afq.files.mrtrix.wm{varargin{1}};
-        if afq.params.track.multishell
-            val.tt5  = afq.files.mrtrix.tt5{varargin{1}};
-        end
+        val.tt5  = afq.files.mrtrix.tt5{varargin{1}};
+        val.gmwmi  = afq.files.mrtrix.gmwmi{varargin{1}};
+        val.wm_dilated  = afq.files.mrtrix.wm_dilated{varargin{1}};        
     case{'showfigures' 'showfigs'}
         val = logical(afq.params.showfigs);
     case{'fiberweighting'}

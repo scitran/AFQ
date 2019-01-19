@@ -3,7 +3,8 @@ function files = AFQ_mrtrixInit(dt6, ...
                                 mrtrix_folder, ...
                                 mrtrixVersion, ...
                                 multishell, ...
-                                tool)
+                                tool, ...
+                                faMaskThresh)
 % function files = AFQ_mrtrixInit(dt6, lmax, mrtrix_folder)
 % 
 % Initialize an mrtrix CSD analysis
@@ -48,6 +49,7 @@ if notDefined('lmax'), lmax = 4; end
 if notDefined('tool'), tool = 'freesurfer'; end
 if notDefined('multishell'), multishell = false; end
 if notDefined('mrtrixVersion'), mrtrixVersion = 3; end
+if notDefined('faMaskThresh'), faMaskThresh = 0.3; end
 
 % Loading the dt file containing all the paths to the fiels we need.
 dt_info = load(dt6);
@@ -145,21 +147,18 @@ if (~computed.('dwi'))
                          mrtrixVersion); 
 end
 
-
 % This file contains both bvecs and bvals, as per convention of mrtrix
-% if (~computed.('b'))
-%    bvecs = fullfile(dt_info.params.rawDataDir, strcat(fnameDwRawFile, '.bvecs'));
-%    bvals = fullfile(dt_info.params.rawDataDir, strcat(fnameDwRawFile, '.bvals'));
-%   bvecs = dt_info.files.alignedDwBvecs;
-%   bvals = dt_info.files.alignedDwBvals;
-[bvecPath bvecName bvecExt] = fileparts(dt_info.files.alignedDwBvecs);
-[bvalPath bvalName bvalExt] = fileparts(dt_info.files.alignedDwBvals);
-bvecs = fullfile(session, [bvecName bvecExt]);
-bvals = fullfile(session, [bvalName bvalExt]);
-
-
+if (~computed.('b'))
+    %    bvecs = fullfile(dt_info.params.rawDataDir, strcat(fnameDwRawFile, '.bvecs'));
+    %    bvals = fullfile(dt_info.params.rawDataDir, strcat(fnameDwRawFile, '.bvals'));
+    %   bvecs = dt_info.files.alignedDwBvecs;
+    %   bvals = dt_info.files.alignedDwBvals;
+    [bvecPath bvecName bvecExt] = fileparts(dt_info.files.alignedDwBvecs);
+    [bvalPath bvalName bvalExt] = fileparts(dt_info.files.alignedDwBvals);
+    bvecs = fullfile(session, [bvecName bvecExt]);
+    bvals = fullfile(session, [bvalName bvalExt]);
     mrtrix_bfileFromBvecs(bvecs, bvals, files.b);
-% end
+end
 
 % Convert the brain mask from mrDiffusion into a .mif file: 
 if (~computed.('brainmask'))
@@ -169,6 +168,16 @@ if (~computed.('brainmask'))
                        false, ...
                        false, ...
                        mrtrixVersion); 
+end
+
+% Dilate and erode the brainmask
+if (~computed.('brainmask_dilated'))  || (~computed.('brainmask_eroded'))
+  brainMaskFile        = fullfile(session, dt_info.files.brainMask); 
+  AFQ_mrtrix_maskfilter(brainMaskFile, ...
+                        files.brainmask_dilated, ...
+                        files.brainmask_eroded, ...
+                        false, ...
+                        mrtrixVersion);
 end
 
 % Generate diffusion tensors:
@@ -210,70 +219,67 @@ if (~computed.('response'))
                       mrtrixVersion) 
 end
 
-% Create a white-matter mask, tracktography will act only in here.
-if (~computed.('wmMask'))
-  wmMaskFile = fullfile(session, dt_info.files.wmMask);
-  AFQ_mrtrix_mrconvert(wmMaskFile, ...
-                       files.wmMask, ...
-                       [], ...
-                       0, ...
-                       mrtrixVersion)
-end
-
-
-
-if ~multishell
-    % Compute the CSD estimates: 
-    if (~computed.('csd'))  
-      disp('The following step takes a while (a few hours)');                                  
-      AFQ_mrtrix_csdeconv(files.dwi, ...
-                          files.response, ...
-                          lmax, ...
-                          files.csd, ... %out
-                          files.b, ... %grad
-                          files.brainmask,... %mask
-                          false,... % Verbose
-                          mrtrixVersion)
-    end
-
-else
-    % Create the 5tt file from the same ac-pc-ed T1 nii we used in the other steps: 
-    if (~computed.('tt5')) && (mrtrixVersion > 2)
-        inputFile = [];
-        if strcmp(tool, 'fsl')
+% Create the 5tt file from the T1 / aparc+aseg
+if (~computed.('tt5')) || (~computed.('gmwmi'))
+    inputFile = [];
+    switch tool
+        case {'fsl'}        
             inputFile = fullfile(session, dt_info.files.t1);
             if ~(exist(inputFile, 'file') == 2)
                 error(['Cannot find T1, please copy it to ' session]);
             end    
-        % Find and aseg file and better if it is an aparc+aseg one. 
-        % Select the first aparc if there are several *aseg* files.
-        % It can take mgz or nii or mif
-        else
-           asegFiles = dir(fullfile(session,'*aseg*'));
-           for ii = 1:length(asegFiles)
+            % Find and aseg file and better if it is an aparc+aseg one. 
+            % Select the first aparc if there are several *aseg* files.
+            % It can take mgz or nii or mif
+        case {'freesurfer'}
+            % Add it to the dt_info for future versions
+            asegFiles = dir(fullfile(session,'*aseg*'));
+            for ii = 1:length(asegFiles)
                if length(strfind(asegFiles(ii).name, 'aseg')) > 0
                    inputFile = fullfile(session, asegFiles(ii).name);
                end
                if length(strfind(asegFiles(ii).name, 'aparc')) > 0
                    inputFile = fullfile(session, asegFiles(ii).name);
                end
-           end
+            end
             if ~(exist(inputFile, 'file') == 2)
                 disp(['inputFile = ' inputFile]); 
-                error(['Cannot find aseg file, please copy it to ' session]);
-            end     
-        end        
-
-        % TODO: update directory structure to point to FS files.
-
-        AFQ_mrtrix_5ttgen(inputFile, ...
-                          files.tt5, ...
-                          0, ...
-                          0, ...
-                          mrtrixVersion,...
-                          tool);
+                warning(['Cannot find aseg file, please copy it to ' session ...
+                         'if there is a t1 file fsl will be used']);
+                tool = 'fsl';
+                inputFile = fullfile(session, dt_info.files.t1);
+                if ~(exist(inputFile, 'file') == 2)
+                    error(['Cannot find T1, please copy it to ' session]);
+                end 
+            end
+        otherwise
+            error(sprintf('The tool %s has not been implemented, use freesurfer or fsl.', tool))
     end
-    
+    fprintf('Running the 5ttgen code with the %s tool and %s\n', tool, inputFile)
+    AFQ_mrtrix_5ttgen(inputFile, ...
+                      files.tt5, ...
+                      files.gmwmi, ...
+                      0, ...
+                      0, ...
+                      mrtrixVersion,...
+                      tool);
+end
+
+% Create a white-matter mask
+if (~computed.('wmMask')) || (~computed.('wmMask_dilated'))
+    AFQ_mrtrix_5ttwm(files.tt5, ...
+                      files.fa, ...
+                      faMaskThresh, ...
+                      files.brainmask_eroded, ...
+                      files.wmMask, ...
+                      files.wmMask_dilated, ...
+                      false, ...
+                      mrtrixVersion)
+
+end
+
+% Calculate the FOD using CSD
+if multishell
     % Create per tissue response function estimation
     % Not using the other response function, we already have the masks
     if (~computed.('wmResponse')) && (mrtrixVersion > 2)
@@ -284,8 +290,7 @@ else
                     
         AFQ_mrtrix_cmd(cmd_str, 0, 0,mrtrixVersion);
     end
-    
-    
+     
     % Compute the CSD estimates: 
     if (~computed.('csd'))   && (mrtrixVersion > 2)
       disp('The following step takes a while (a few hours)');                                  
@@ -298,7 +303,7 @@ else
                               files.gmCsd, ...
                               files.csfCsd, ...
                               files.b, ...
-                              files.brainmask, ...
+                              files.brainmask_dilated, ...
                               0, ...
                               0, ...
                               mrtrixVersion)
@@ -312,6 +317,20 @@ else
         AFQ_mrtrix_cmd(cmd_str, 0, 0,mrtrixVersion);
     end
     
+else
+    % Compute the CSD estimates: 
+    if (~computed.('csd'))  
+      disp('The following step takes a while (a few hours)'); 
+      disp('Using the default CSD with dilated brainmask, recommended for ACT, it only takes a little bit longer'); 
+      AFQ_mrtrix_csdeconv(files.dwi, ...
+                          files.response, ...
+                          lmax, ...
+                          files.csd, ... %out
+                          files.b, ... %grad
+                          files.brainmask_dilated,... %mask
+                          false,... % Verbose
+                          mrtrixVersion)
+    end
 end
 
 end  % End function

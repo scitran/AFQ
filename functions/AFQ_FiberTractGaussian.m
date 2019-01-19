@@ -24,7 +24,7 @@ function [SuperFiber, weights] = AFQ_FiberTractGaussian(fg, numberOfNodes, M)
 %  [SuperFiber, weights] = AFQ_FiberTractGaussian(fg, numberOfNodes, M)
 % 
 %  Written by Jason D. Yeatman pm 12/8/2011.  
-%  Based on code fromdtiFiberGroupPropertyWeightedAverage
+%  Based on code from dtiFiberGroupPropertyWeightedAverage
 % 
 
 if notDefined('fg'), error('Fiber group required'); end
