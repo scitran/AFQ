@@ -21,7 +21,7 @@ function [status,results] = AFQ_mrtrix_cmd(cmd_str, bkgrnd, verbose,mrtrixVersio
 
 if notDefined('bkgrnd'), bkgrnd = false;end
 if notDefined('verbose'),verbose = true;end
-if notDefined('mrtrixVersion'),verbose = 3;end
+if notDefined('mrtrixVersion'),mrtrixVersion = 3;end
 
 % Need to bypass the matlab libraries at the top of the path, by screwing
 % with it:

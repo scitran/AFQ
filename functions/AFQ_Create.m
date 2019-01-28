@@ -353,19 +353,12 @@ if AFQ_get(afq,'use mrtrix')
         % created, one for each tissue type. We only pass the csd of the 
         % wm = wmMask for tractography, wmMask as seed_image
         % and tt5 for -act (instead of -mask)
-
-        if afq.params.track.multishell
-            afq.files.mrtrix.csd{ii}   = files.wmCsd;
-            afq.files.mrtrix.wm{ii}    = files.wmMask;
-            afq.files.mrtrix.tt5{ii}   = files.tt5;
-            afq.files.mrtrix.gmwmi{ii} = files.gmwmi;
-        else
-            afq.files.mrtrix.csd{ii}   = files.csd;
-            afq.files.mrtrix.wm{ii}    = files.wmMask;
-            afq.files.mrtrix.wm_dilated{ii}    = files.wmMask_dilated;
-            afq.files.mrtrix.tt5{ii}   = files.tt5;
-            afq.files.mrtrix.gmwmi{ii} = files.gmwmi;
-
+        afq.files.mrtrix.wm{ii}         = files.wmMask;
+        afq.files.mrtrix.wm_dilated{ii} = files.wmMask_dilated;
+        afq.files.mrtrix.tt5{ii}        = files.tt5;
+        afq.files.mrtrix.gmwmi{ii}      = files.gmwmi;
+        if afq.params.track.multishell; afq.files.mrtrix.csd{ii} = files.wmCsd;
+        else; afq.files.mrtrix.csd{ii}   = files.csd;
         end
     end
 end
