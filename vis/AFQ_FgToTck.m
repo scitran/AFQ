@@ -8,7 +8,7 @@ function AFQ_FgToTck(fg, pathName, fib2mt, createObj)
         % Usually tck files stored in mrtrix folder
         if fib2mt;fiberPath = strrep(fiberPath,'fibers','mrtrix'); end
         if ~exist(fiberPath,'dir'); mkdir(fiberPath);end
-        dr_fwWriteMrtrixTck(myfg, fullfile(fiberPath, fiberName))
-        if createObj;fg2MNIObj(myfg,'fname', fullfile(fiberPath,objName));end
+        AFQ_WriteMrtrixTck(myfg, fullfile(fiberPath, fiberName))
+        if createObj;AFQ_fg2MNIObj(myfg,'fname', fullfile(fiberPath,objName));end
     end
 end
