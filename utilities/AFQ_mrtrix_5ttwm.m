@@ -46,9 +46,22 @@ if mrtrixVersion == 3
         
     % Now create the anatomically based wmMask and dilate it, it will be used to 
     % contain the fibers, but as being it dilated it will encounter the GM
-    cmd_str2 = ['mrconvert -coord 3 2 -axes 0,1,2 ' tt5File ' ' ...
-                 '- | maskfilter -force -npass 2 - dilate ' ...
-                  wmMask_dilated];
+    
+    % For now I am going to remove this, because I found that for some
+    % datasets, the fsl segmentation doesn't work well...
+    % And then the mask it is usually bigger than the wmMask, but it is not
+    % perfect either, so I will use a bigger mask based in the previous
+    % code now for testing and if it is ok it will stay for now. 
+    % We will use ACT and the anatomicals when we have FS, otherwise the
+    % analysis will be DWI based
+        % cmd_str2 = ['mrconvert -coord 3 2 -axes 0,1,2 ' tt5File ' ' ...
+        %          '- | maskfilter -force -npass 2 - dilate ' ...
+        %           wmMask_dilated];
+        
+    cmd_str2 = ['mrthreshold -force -abs ' num2str(faMaskThresh - .1) ' ' ...
+                        faFile ' - | mrcalc -force - ' ...
+                        brainmask_eroded ' -mult ' wmMask_dilated];
+        
     
 end
 

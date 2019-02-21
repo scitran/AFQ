@@ -69,7 +69,7 @@ switch type
     case 'mat'
         dtiWriteFiberGroup(fg, name);
     case {'tck', 'mrtrix', '.tck'}
-        which AFQ_dtiExportFibersMrtrix(fg, name);
+        AFQ_dtiExportFibersMrtrix(fg, name);
 end
 
 return

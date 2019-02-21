@@ -8,7 +8,7 @@ function afq = AFQ_ComputeSpatialNormalization(afq)
 runsubs = AFQ_get(afq,'run subjects');
 
 if AFQ_get(afq, 'use ANTS')
-    fprintf('\n Computing spatial normalization with ANTS\n')
+    fprintf('\n Computing spatial normalization with ANTS (hours)\n')
     sub_dirs = AFQ_get(afq,'sub_dirs')
     for ii = runsubs
         % These will be the names of the output files

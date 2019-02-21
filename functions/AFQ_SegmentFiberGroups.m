@@ -1,6 +1,10 @@
-function [fg_classified,fg_unclassified,classification,fg] = ...
-    AFQ_SegmentFiberGroups(dt6File, fg, Atlas, ...
-    useRoiBasedApproach, useInterhemisphericSplit, antsInvWarp)
+function [fg_classified,fg_unclassified,classification,fg]=AFQ_SegmentFiberGroups(...
+                                                   dt6File, ...
+                                                   fg, ...
+                                                   Atlas, ...
+                                                   useRoiBasedApproach, ...
+                                                   useInterhemisphericSplit, ...
+                                                   antsInvWarp)
 % Categorizes each fiber in a group into one of the 20 tracts defined in
 % the Mori white matter atlas. 
 %
@@ -121,16 +125,16 @@ elseif length(useRoiBasedApproach)<2,  recomputeROIs = 1;
 else                                   recomputeROIs = useRoiBasedApproach(2);
 end
 if recomputeROIs
-    display('You chose to recompute ROIs');
+    disp('You chose to recompute ROIs');
 end
 %E.g., to avoid recomputing  ROIs and use minDist of 4mm one would pass [useRoiBasedApproach=[4 0]];
 if isnumeric(useRoiBasedApproach)
     minDist=useRoiBasedApproach(1);
     useRoiBasedApproach='true';
 else
-    minDist=2; %defualt is .89;
+    minDist=.89;  % GLU: there was a 2 here; %defualt is .89;
 end
-display(['Fibers that get as close to the ROIs as ' num2str(minDist) 'mm will become candidates for the Mori Groups']);
+disp(['Fibers that get as close to the ROIs as ' num2str(minDist) 'mm will become candidates for the Mori Groups']);
 % This is left as an option in case an updated atlas is released
 if(~exist('Atlas','var') || isempty(Atlas))
     %Default scenario: use original Mori Atlas
@@ -156,6 +160,7 @@ if ischar(fg), fg = dtiLoadFiberGroup(fg); end
 % Set the directory where templates can be found
 tdir = fullfile(fileparts(which('mrDiffusion.m')), 'templates');
 % Initialize spm defualts for normalization
+% {
 spm_get_defaults; 
 global defaults; 
 % In my case it is not reading the estimate, just the .write, copied this values
@@ -168,13 +173,15 @@ defaults.normalise.estimate.cutoff  = 25;
 defaults.normalise.estimate.nits    = 16;
 defaults.normalise.estimate.reg     = 1;
 params = defaults.normalise.estimate;
+%}
 
-%% Spatially normalize diffusion data with the MNI (ICBM) template
+%% Register diffusion data to the MNI (ICBM) template
 template = fullfile(tdir,'MNI_JHU_T2.nii.gz');
 % Rescale image valueds to get better gray/white/CSF contrast
 alignIm = mrAnatHistogramClip(double(dt.b0),0.3,0.99);
 % Compute normalization
-[sn, Vtemplate, invDef] = mrAnatComputeSpmSpatialNorm(alignIm, dt.xformToAcpc, template, params);
+[sn, Vtemplate, invDef] = mrAnatComputeSpmSpatialNorm(alignIm, dt.xformToAcpc, ...
+                                                            template, params);
 % check the normalization
 mm = diag(chol(Vtemplate.mat(1:3,1:3)'*Vtemplate.mat(1:3,1:3)))';
 bb = mrAnatXformCoords(Vtemplate.mat,[1 1 1; Vtemplate.dim]);

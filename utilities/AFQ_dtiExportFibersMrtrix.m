@@ -76,7 +76,7 @@ end
 clear ii
 
 % save the file w/ mrtrix fxn
-write_mrtrix_track(tck, tck_filename);
+write_mrtrix_tracks(tck, tck_filename);
 
 return
 end
@@ -121,3 +121,4 @@ end
 
 fwrite (f, [ inf inf inf ], 'float32');
 fclose (f);
+end

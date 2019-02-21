@@ -110,9 +110,14 @@ segName = AFQ_get(afq,'segfilename');
 
 % If ANTS is installed on the system then precompute spatial normalization
 % with ANTS and save to the afq structure
+% BW suggests: move ants outputs to ANTs subdir
+
+tic
 if AFQ_get(afq, 'use ANTS')
+    disp('ANTs normalization, it can take hours')
     afq = AFQ_ComputeSpatialNormalization(afq);
 end
+toc
 
 %%  Loop over every subject
 for ii = runsubs
@@ -206,7 +211,7 @@ for ii = runsubs
         end
         % Convert fiber groups into an array if they are not already 
         fg_clean = fg2Array(fg_classified); 
-        
+        fg_clip  = fg_clean;
         % Remove all fibers that are too long and too far from the core of
         % the group.  This algorithm will constrain the fiber group to
         % something that can be reasonable represented as a 3d gaussian
@@ -219,10 +224,11 @@ for ii = runsubs
                     % load ROIs
                     [roi1 roi2] = AFQ_LoadROIs(jj,sub_dirs{ii});
                     % clip fiber group
-                    fg_clip     = dtiClipFiberGroupToROIs(fg_clean(jj),roi1,roi2);
-                    if length(fg_clip.fibers) > 20
+                    fg_clip(jj) = dtiClipFiberGroupToROIs(fg_clean(jj),roi1,roi2);
+                    if length(fg_clip(jj).fibers) > 20
                         % clean clipped fiber group
-                        [~, keep]   = AFQ_removeFiberOutliers(fg_clip,afq.params.maxDist,afq.params.maxLen,afq.params.numberOfNodes,'mean',0);
+                        [fg_clip(jj), keep]   = AFQ_removeFiberOutliers(fg_clip(jj),afq.params.maxDist,afq.params.maxLen,afq.params.numberOfNodes,'mean',0);
+                        fg_clip(jj).name      = fg_clean(jj).name;
                         % remove fibers from unclipped group that do no
                         % survive the clipping
                         fg_clean(jj).fibers =fg_clean(jj).fibers(keep);
@@ -236,6 +242,9 @@ for ii = runsubs
         % Save cleaned fibers
         cleanFgName = fullfile(fibDir,[prefix(segName) '_clean_D' num2str(afq.params.maxDist) '_L'  num2str(afq.params.maxLen) '.mat']);
         dtiWriteFiberGroup(fg_clean, cleanFgName);
+        % Save the clipped ones as well for QA
+        clippedFgName = fullfile(fibDir,[prefix(segName) '_clean_D' num2str(afq.params.maxDist) '_L'  num2str(afq.params.maxLen) '_CLIPPED.mat']);
+        dtiWriteFiberGroup(fg_clip, clippedFgName);
         % Set the path to the fibers in the afq structure
         afq = AFQ_set(afq, 'clean fg path', 'subnum', ii, cleanFgName);
         % Convert fiber group back to a 1 cell structure for future
@@ -258,7 +267,7 @@ for ii = runsubs
         fWeight = AFQ_get(afq,'fiber weighting');
         % By default Tract Profiles of diffusion properties will always be
         % calculated
-        [fa, md, rd, ad, cl, vol, TractProfile] = AFQ_ComputeTractProperties(...
+        [fa,md,rd,ad,cl,vol,TractProfile]=AFQ_ComputeTractProperties(...
                                                 fg_classified, ...
                                                 dt, ...
                                                 afq.params.numberOfNodes, ...
@@ -266,7 +275,7 @@ for ii = runsubs
                                                 sub_dirs{ii}, ...
                                                 fWeight, ...
                                                 afq);
-        
+
         % Parameterize the shape of each fiber group with calculations of
         % curvature and torsion at each point and add it to the tract
         % profile
@@ -285,7 +294,7 @@ for ii = runsubs
         % If any other images were supplied calculate a Tract Profile for that
         % parameter
         numimages = AFQ_get(afq, 'numimages');
-        if numimages > 0;
+        if numimages > 0
             for jj = 1:numimages
                 % Read the image file
                 image = niftiRead(afq.files.images(jj).path{ii});

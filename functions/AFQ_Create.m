@@ -190,7 +190,7 @@ afq.params.computeCSD = 0;
 % Whether or not to comput control group norms
 afq.params.computenorms = 1;
 % Which software package to use for normalization
-afq.params.normalization = 'spm';
+afq.params.normalization = 'ants';
 % For aditional images that are passed into afq you can set a resolution to
 % resample those images to before computing tract profiles (e.g., [2 2 2])
 afq.params.imresample = false;
@@ -256,7 +256,7 @@ afq.params.track.tool = 'freesurfer';
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Modify default parameters based on user input                          %
 afq = afqVarargin(afq, varargin);                                         %
-afq.params = afqVarargin(afq.params, varargin);     
+afq.params = afqVarargin(afq.params, varargin);  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % TODO:
@@ -334,6 +334,11 @@ if AFQ_get(afq,'use mrtrix')
         else
             lmax = afq.params.track.mrtrix_lmax;
         end
+        % Beware, in the latest versions of mrtrix we are not using lmax,
+        % their scripts take care of it. 
+        % So, there is manual, there is autoMax (calculated above) and
+        % automrtrix, calculated by them Right now, the code will just do
+        % automrtrix... Change it and leave it explained. 
         files = AFQ_mrtrixInit(AFQ_get(afq, 'dt6path',ii), ...
                                lmax,...
                                mrtrixdir,...
@@ -357,9 +362,28 @@ if AFQ_get(afq,'use mrtrix')
         afq.files.mrtrix.wm_dilated{ii} = files.wmMask_dilated;
         afq.files.mrtrix.tt5{ii}        = files.tt5;
         afq.files.mrtrix.gmwmi{ii}      = files.gmwmi;
-        if afq.params.track.multishell; afq.files.mrtrix.csd{ii} = files.wmCsd;
-        else; afq.files.mrtrix.csd{ii}   = files.csd;
-        end
+        % Now we are always providing the wmCsd to the tractography
+        afq.files.mrtrix.csd{ii}        = files.wmCsd;
+        % if afq.params.track.multishell; afq.files.mrtrix.csd{ii} = files.wmCsd;
+        % else; afq.files.mrtrix.csd{ii}   = files.csd;
+        % end
+        
+        % This is new, here now we will create the files for the /bin
+        % folder that we did not create in AFQ_dtiInit.m
+        bindir = fullfile(afq.sub_dirs{ii},'bin');
+        % These are the files to be created:
+        binfiles.b0        = fullfile(bindir,'b0.nii.gz');
+        binfiles.brainmask = fullfile(bindir,'brainMask.nii.gz');
+        binfiles.wmMask    = fullfile(bindir,'wmMask.nii.gz');
+        binfiles.tensors   = fullfile(bindir,'tensors.nii.gz');
+        binfiles.fa        = fullfile(bindir,'fa.nii.gz');
+        
+        % use a series of AFQ_mrtrix_convert-s for this
+        AFQ_mrtrix_mrconvert(files.b0, binfiles.b0,0,0,afq.software.mrtrixVersion); 
+        AFQ_mrtrix_mrconvert(files.brainmask, binfiles.brainmask,0,0,afq.software.mrtrixVersion); 
+        AFQ_mrtrix_mrconvert(files.wmMask, binfiles.wmMask,0,0,afq.software.mrtrixVersion); 
+        AFQ_mrtrix_mrconvert(files.dt, binfiles.tensors,0,0,afq.software.mrtrixVersion); 
+        AFQ_mrtrix_mrconvert(files.fa, binfiles.fa,0,0,afq.software.mrtrixVersion); 
     end
 end
          

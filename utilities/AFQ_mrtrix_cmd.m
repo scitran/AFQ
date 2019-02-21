@@ -37,7 +37,7 @@ if bkgrnd
         cmd_str = ['xterm -e ' cmd_str ' &'];
     end    
 end
-fprintf('\n[%s] Running the following command: \n%s\n',mfilename,cmd_str); 
+fprintf('\n[%s]\n%s\n',mfilename,cmd_str); 
 
 % Run the command and get back status and results:
 [status,results] = system(cmd_str);

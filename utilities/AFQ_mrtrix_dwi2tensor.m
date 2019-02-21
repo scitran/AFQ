@@ -1,5 +1,8 @@
-function [status, results] = AFQ_mrtrix_dwi2tensor (in_file, out_file,...
-                               b_file, verbose, mrtrixVersion)
+function [status, results] = AFQ_mrtrix_dwi2tensor(files, ...
+                                                   multishell,...
+                                                   bkgrnd, ...
+                                                   verbose, ...
+                                                   mrtrixVersion)
 
 %
 % Calculate diffusion tensors. 
@@ -18,23 +21,25 @@ function [status, results] = AFQ_mrtrix_dwi2tensor (in_file, out_file,...
 % Notes
 % -----
 % http://www.brain.org.au/software/mrtrix/tractography/preprocess.html
+% Latest edition: GLU 2019.02: if multishell use closest shell to 1000
 
+if notDefined('verbose'); verbose = true; end
+if notDefined('bkgrnd');  bkgrnd  = false;end
+if mrtrixVersion ~= 3; error('Only mrTrix version 3 supported.');end
 
-if notDefined('verbose')
-   verbose = true; 
-end
-
-if notDefined('bkgrnd')
-   bkgrnd = false; 
-end
-
-
-if notDefined('b_file')
-    b_file = 'encoding.b';
-end 
 
 % This command generates  tensors: 
-cmd_str = sprintf('dwi2tensor %s %s -grad %s',in_file, out_file, b_file); 
+if multishell
+    cmd_str = ['dwi2tensor -force ' ...
+               '-grad ' files.bSS ' ' ...
+               files.dwiSS ' ' ...
+               files.dt];
+else
+    cmd_str = ['dwi2tensor -force ' ...
+               '-grad ' files.b0 ' ' ...
+               files.dwi ' ' ...
+               files.dt];
+end
 
 % Send it to mrtrix: 
 [status,results] = AFQ_mrtrix_cmd(cmd_str, bkgrnd, verbose, mrtrixVersion); 
