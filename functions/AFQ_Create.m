@@ -379,10 +379,33 @@ if AFQ_get(afq,'use mrtrix')
         binfiles.fa        = fullfile(bindir,'fa.nii.gz');
         
         % use a series of AFQ_mrtrix_convert-s for this
-        AFQ_mrtrix_mrconvert(files.b0, binfiles.b0,0,0,afq.software.mrtrixVersion); 
+        AFQ_mrtrix_mrconvert(files.b0, binfiles.b0,0,0,afq.software.mrtrixVersion);
+        % The b0 coming from mrtrix has multiple volumes, and I think
+        % mrDiffusion is expecting a single volume, obtain the mean here
+        A       = niftiRead(binfiles.b0); % Reading nifti created by mrtrix
+        A.data  = mean(A.data,4);
+        A.dim   = size(A.data);
+        A.ndim  = length(A.dim);
+        A.pixdim= A.pixdim(1:3);
+        niftiWrite(A);
+        % Continue with the rest of conversions
         AFQ_mrtrix_mrconvert(files.brainmask, binfiles.brainmask,0,0,afq.software.mrtrixVersion); 
         AFQ_mrtrix_mrconvert(files.wmMask, binfiles.wmMask,0,0,afq.software.mrtrixVersion); 
         AFQ_mrtrix_mrconvert(files.dt, binfiles.tensors,0,0,afq.software.mrtrixVersion); 
+        % In order to make the rest of the flow work well, we will modify the
+        % tensor file to be the same mrDiffusion is expecting
+        B       = niftiRead(binfiles.tensors); % Reading nifti created by mrtrix
+        sz      = size(B.data);
+        B.data  = reshape(B.data,[sz(1:3),1,sz(4)]);
+        % This is horrible. Mrtrix and mrDiffusion use the same format dxx,dyy,dzz...
+        % in order to make the workflow work I need to convert it when
+        % writing and when reading in order to maintain existing functions
+        B.data = B.data(:,:,:,1,[1 4 2 5 6 3]);
+        B.dim   = size(B.data);
+        B.ndim  = length(B.dim);
+        B.pixdim= [B.pixdim, 1];
+        niftiWrite(B);
+        % Write the FA values as well
         AFQ_mrtrix_mrconvert(files.fa, binfiles.fa,0,0,afq.software.mrtrixVersion); 
     end
 end
