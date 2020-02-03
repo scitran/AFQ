@@ -8,5 +8,33 @@ if notDefined('template')
 end
 outname = prefix(prefix(image))
 % Normalize the image to the template with ANTS
-cmd = sprintf('antsIntroduction.sh -d 3 -r %s -i %s -o %s',template,image, outname);
+cmd = ['antsIntroduction.sh '...
+       '-d 3 '...
+       '-r ' template ' '...
+       '-i ' image ' '...
+       '-o ' outname];
+system(cmd)
+
+
+% GLU notes on the commands
+% -d:  ImageDimension: 2 or 3 (for 2 or 3 Dimensional registration)
+% -r:  Reference image
+% -i:  Input image
+% -o:  OUTPREFIX; A prefix that is prepended to all output files.
+
+
+
+
+
+% Use Nonlinear antsRegistrationSyN.sh for registration of diffusion with
+% anatomical
+image    = 'dwi.nii.gz';
+anat     = 't1w_acpc.nii.gz';
+outname  = 'dwi2t1';
+cmd = ['antsRegistrationSyNQuick.sh '...
+       '-d 3 '...
+       '-f ' anat ' '...
+       '-m ' image ' '...
+       '-o ' outname ' '...
+       '-n 6'];
 system(cmd)

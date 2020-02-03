@@ -383,6 +383,16 @@ if AFQ_get(afq,'use mrtrix')
         AFQ_mrtrix_mrconvert(files.brainmask, binfiles.brainmask,0,0,afq.software.mrtrixVersion); 
         AFQ_mrtrix_mrconvert(files.wmMask, binfiles.wmMask,0,0,afq.software.mrtrixVersion); 
         AFQ_mrtrix_mrconvert(files.dt, binfiles.tensors,0,0,afq.software.mrtrixVersion); 
+        % In order to make the rest of the flow work well, we will modify the
+        % tensor file to be the same mrDiffusion is expecting
+        A       = niftiRead(binfiles.tensors);
+        sz      = size(A.data);
+        A.data  = reshape(A.data,[sz(1:3),1,sz(4)]);
+        A.dim   = size(A.data);
+        A.ndim  = length(A.dim);
+        A.pixdim= [A.pixdim, 1];
+        niftiWrite(A);
+        % Write the FA values as well
         AFQ_mrtrix_mrconvert(files.fa, binfiles.fa,0,0,afq.software.mrtrixVersion); 
     end
 end

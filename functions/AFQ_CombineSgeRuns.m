@@ -21,7 +21,7 @@ function afq = AFQ_CombineSgeRuns(afq, afq_sge, subnum, subnum_sge)
 % afq - combined structure
 
 if ~exist('subnum_sge' ,'var') || isempty(subnum_sge)
-    subnum_sge = sugnum;
+    subnum_sge = subnum;
 end
 
 % Get the names of the values in the afq_sge structure
@@ -35,7 +35,10 @@ fgNames  = AFQ_get(afq_sge,'fgnames');
 % Loop over fiber groups and values to assign the values for this subjects
 % sge run to the main afq structure
 for jj = 1:length(fgNames)
+    subnum_sge = 1;
     afq.sub_dirs{subnum} = afq_sge.sub_dirs{subnum_sge};
+    afq.sub_ids{subnum}  = afq_sge.sub_ids{subnum_sge};
+    
     for v = 1:length(valNames)
         % Set the values for this subject in the afq struct to be the ones
         % from the afq_sge struct for this valname and fiber group
