@@ -53,7 +53,9 @@ if notDefined('faMaskThresh'), faMaskThresh = 0.3; end
 
 % Loading the dt file containing all the paths to the fiels we need.
 dt_info = load(dt6);
-
+disp('Just load dt6, and the dt6 = dt_info.files is:')
+dt_info.files
+%
 %{
 Check if this is correct, dt_info.files has some relative and absolute
 paths, it doesn't make sense. 
@@ -76,7 +78,7 @@ is, but only with the original .nii-s converted from dicoms and the bvecs
 and bvals. The t1-s are in other path with the rest of the anat files.
 Furthermore, the assumption that the 'raw' file is above the dt6 filename
 breaks the code as it is duplicating the whole pathnames. 
-Example: mrtrix_dir = /bcbl/home/public/Gari/MINI/ANALYSIS/DWI/S002//bcbl/home/public/Gari/MINI/ANALYSIS/DWI/S002/dmri/dti90trilin/mrtrixi/
+Example: mrtrix_dir = /bcbl/home/public/Gari/MINI/ANALYSIS/DWI/S002//bcbl/home/public/Gari/MINI/ANALYSIS/DWI/S002/dmri/dti90trilin/mrtrix/
 I fixed this (anf the initial part of the name issue as well)
 I still don't understand the use case. I understand that the mrtrix
 folder should be at the same level as the dt6.mat file, which defines
@@ -109,7 +111,11 @@ if ~strcmp(AnalysisDir, AnalysisDir2); error('Check all the path mess for mrtrix
 % Strip the file names out of the dt6 strings. 
 % dwRawFile = dt_info.files.alignedDwRaw;
 % dwRawFile = fullfile(dt_info.params.rawDataDir, strcat(dt_info.params.rawDataFile,'.gz'));
-dwRawFile = fullfile(SessionDir, strcat(dt_info.params.rawDataFile,'.gz'));
+% dwRawFile = fullfile(SessionDir, strcat(dt_info.params.rawDataFile,'.gz'));
+% The first option is the good one, but if I did this change I want to maintain it. Nevertheless, it cannot come from dt_info.params
+[p,f,e] = fileparts(dt_info.files.alignedDwRaw);
+dwRawFile = fullfile(SessionDir,[f e]); 
+
 
 % This line removes the extension of the file (.nii.gz) and mainaints de path
 fname_trunk = dwRawFile(1:strfind(dwRawFile,'.')-1);
