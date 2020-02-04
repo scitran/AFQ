@@ -283,6 +283,15 @@ afq.files.fibers.wholebrain = cell(AFQ_get(afq,'num subs'),1);
 afq.files.fibers.segmented  = cell(AFQ_get(afq,'num subs'),1);
 afq.files.fibers.clean      = cell(AFQ_get(afq,'num subs'),1);
 
+
+disp('[AFQ_Create] Until here, parameter reading and setup.')
+disp('[AFQ_Create] This is afq and afq.files')
+afq
+afq.files
+
+
+
+
 %% Add files from previous AFQ runs to afq structure
 
 % The name of the segmented fiber group depends on whether we are clipping
@@ -322,7 +331,12 @@ afq.overwrite.vals = zeros(AFQ_get(afq,'num subs'),1);
 %% If desired compute constrained spherical deconvolution with mrtrix
 % If we want to use mrtrix for tractography that we will compute CSD right
 % here
-if AFQ_get(afq,'use mrtrix')
+
+
+% For some reason it is not going inside this loop, at least when testing in black the docker container
+% if AFQ_get(afq,'use mrtrix')
+    if true
+    disp('use mrtrix is true')
     for ii = 1:AFQ_get(afq,'num subs')
         mrtrixdir = fullfile(afq.sub_dirs{ii},'mrtrix');
         if ~exist(mrtrixdir,'dir'),mkdir(mrtrixdir);end
@@ -339,7 +353,9 @@ if AFQ_get(afq,'use mrtrix')
         % So, there is manual, there is autoMax (calculated above) and
         % automrtrix, calculated by them Right now, the code will just do
         % automrtrix... Change it and leave it explained. 
-        files = AFQ_mrtrixInit(AFQ_get(afq, 'dt6path',ii), ...
+        dt6path =AFQ_get(afq, 'dt6path',ii) ;
+        fprintf('This is the dt6path going to AFQ_mrtrixInit: %s',dt6path);
+        files = AFQ_mrtrixInit(dt6path, ...
                                lmax,...
                                mrtrixdir,...
                                afq.software.mrtrixVersion, ...
@@ -379,19 +395,33 @@ if AFQ_get(afq,'use mrtrix')
         binfiles.fa        = fullfile(bindir,'fa.nii.gz');
         
         % use a series of AFQ_mrtrix_convert-s for this
-        AFQ_mrtrix_mrconvert(files.b0, binfiles.b0,0,0,afq.software.mrtrixVersion); 
+        AFQ_mrtrix_mrconvert(files.b0, binfiles.b0,0,0,afq.software.mrtrixVersion);
+        % The b0 coming from mrtrix has multiple volumes, and I think
+        % mrDiffusion is expecting a single volume, obtain the mean here
+        A       = niftiRead(binfiles.b0); % Reading nifti created by mrtrix
+        A.data  = mean(A.data,4);
+        A.dim   = size(A.data);
+        A.ndim  = length(A.dim);
+        A.pixdim= A.pixdim(1:3);
+        niftiWrite(A);
+        % Continue with the rest of conversions
+        disp('Here the conversion of mif files to /bin/*.nii.gz-s is done');
         AFQ_mrtrix_mrconvert(files.brainmask, binfiles.brainmask,0,0,afq.software.mrtrixVersion); 
         AFQ_mrtrix_mrconvert(files.wmMask, binfiles.wmMask,0,0,afq.software.mrtrixVersion); 
         AFQ_mrtrix_mrconvert(files.dt, binfiles.tensors,0,0,afq.software.mrtrixVersion); 
         % In order to make the rest of the flow work well, we will modify the
         % tensor file to be the same mrDiffusion is expecting
-        A       = niftiRead(binfiles.tensors);
-        sz      = size(A.data);
-        A.data  = reshape(A.data,[sz(1:3),1,sz(4)]);
-        A.dim   = size(A.data);
-        A.ndim  = length(A.dim);
-        A.pixdim= [A.pixdim, 1];
-        niftiWrite(A);
+        B       = niftiRead(binfiles.tensors); % Reading nifti created by mrtrix
+        sz      = size(B.data);
+        B.data  = reshape(B.data,[sz(1:3),1,sz(4)]);
+        % This is horrible. Mrtrix and mrDiffusion use the same format dxx,dyy,dzz...
+        % in order to make the workflow work I need to convert it when
+        % writing and when reading in order to maintain existing functions
+        B.data = B.data(:,:,:,1,[1 4 2 5 6 3]);
+        B.dim   = size(B.data);
+        B.ndim  = length(B.dim);
+        B.pixdim= [B.pixdim, 1];
+        niftiWrite(B);
         % Write the FA values as well
         AFQ_mrtrix_mrconvert(files.fa, binfiles.fa,0,0,afq.software.mrtrixVersion); 
     end
