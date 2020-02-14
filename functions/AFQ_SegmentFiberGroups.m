@@ -324,6 +324,7 @@ if useRoiBasedApproach
     fgCopy=fg; fgCopy.subgroup=[];
     for roiID=1:size(moriRois, 1)
         % Load the nifit image containing ROI-1 in MNI space
+		%% LMX: need to fix this hard code path for native space ROI
        moridir = '/share/wandell/users/glerma/TESTDATA/FS/17_CAMINO_6835_2/pipeline/input'
         ROI_img_file=fullfile(moridir, 'MORI',  ['MORI_' moriRois{roiID, 1}]);
         % Transform ROI-1 to an individuals native space
