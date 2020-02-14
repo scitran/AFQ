@@ -324,41 +324,52 @@ if useRoiBasedApproach
     fgCopy=fg; fgCopy.subgroup=[];
     for roiID=1:size(moriRois, 1)
         % Load the nifit image containing ROI-1 in MNI space
-        ROI_img_file=fullfile(tdir, 'MNI_JHU_tracts_ROIs',  [moriRois{roiID, 1}]);
+       moridir = '/share/wandell/users/glerma/TESTDATA/FS/17_CAMINO_6835_2/pipeline/input'
+        ROI_img_file=fullfile(moridir, 'MORI',  ['MORI_' moriRois{roiID, 1}]);
         % Transform ROI-1 to an individuals native space
-        if recomputeROIs
-            % Default is to use the spm normalization unless a superior
-            % ANTS normalization was passed in
-            if exist('antsInvWarp','var') && ~isempty(antsInvWarp)
-                outfile = fullfile(fileparts(dt6File),'ROIs',moriRois{roiID, 1});
-                roi1(roiID) = ANTS_CreateRoiFromMniNifti(ROI_img_file, antsInvWarp, [], outfile);
-            else
-                [RoiFileName, invDef, roi1(roiID)]=dtiCreateRoiFromMniNifti(dt6File, ROI_img_file, invDef, true);
-            end
-        else
-            RoiFileName=fullfile(fileparts(dt6File), 'ROIs',  [prefix(prefix(ROI_img_file, 'short'), 'short') '.mat']);
-            roi1(roiID) = dtiReadRoi(RoiFileName);  
-        end
+%         if recomputeROIs
+%             % Default is to use the spm normalization unless a superior
+%             % ANTS normalization was passed in
+%             if exist('antsInvWarp','var') && ~isempty(antsInvWarp)
+%                 outfile = fullfile(fileparts(dt6File),'ROIs',moriRois{roiID, 1});
+%                 roi1(roiID) = ANTS_CreateRoiFromMniNifti(ROI_img_file, antsInvWarp, [], outfile);
+%             else
+%                 [RoiFileName, invDef, roi1(roiID)]=dtiCreateRoiFromMniNifti(dt6File, ROI_img_file, invDef, true);
+%             end
+%         else
+%             RoiFileName=fullfile(fileparts(dt6File), 'ROIs',  [prefix(prefix(ROI_img_file, 'short'), 'short') '.mat']);
+%            roi1(roiID) = dtiReadRoi(RoiFileName);  
+             RoiFileName=fullfile(fileparts(dt6File), 'ROIs',  [prefix(prefix(moriRois{roiID, 1}, 'short'), 'short') '.mat']);
+             roi1(roiID) = dtiImportRoiFromNifti(ROI_img_file);
+             if ~exist(fullfile(fileparts(dt6File), 'ROIs'), 'dir')
+                 mkdir(fullfile(fileparts(dt6File), 'ROIs'))
+             end
+             dtiWriteRoi(roi1(roiID), RoiFileName)
+%        end
         % Find fibers that intersect the ROI
         [fgOut,contentiousFibers, keep1(:, roiID)] = dtiIntersectFibersWithRoi([], 'and', minDist, roi1(roiID), fg);
         keepID1=find(keep1(:, roiID));
         % Load the nifit image containing ROI-2 in MNI space
-        ROI_img_file=fullfile(tdir, 'MNI_JHU_tracts_ROIs',  [moriRois{roiID, 2}]);
-        % Transform ROI-2 to an individuals native space
-        if recomputeROIs
-            [RoiFileName, invDef, roi]=dtiCreateRoiFromMniNifti(dt6File, ROI_img_file, invDef, true);
-            % Default is to use the spm normalization unless a superior
-            % ANTS normalization was passed in
-            if exist('antsInvWarp','var') && ~isempty(antsInvWarp)
-                outfile = fullfile(fileparts(dt6File),'ROIs',moriRois{roiID, 2});
-                roi2(roiID) = ANTS_CreateRoiFromMniNifti(ROI_img_file, antsInvWarp, [], outfile);
-            else
-                [RoiFileName, invDef, roi2(roiID)]=dtiCreateRoiFromMniNifti(dt6File, ROI_img_file, invDef, true);
-            end   
-        else
-            RoiFileName=fullfile(fileparts(dt6File), 'ROIs',  [prefix(prefix(ROI_img_file, 'short'), 'short') '.mat']);
-            roi2(roiID) = dtiReadRoi(RoiFileName);
-        end
+         ROI_img_file=fullfile(moridir, 'MORI',  ['MORI_', moriRois{roiID, 2}]);
+
+%         % Transform ROI-2 to an individuals native space
+%         if recomputeROIs
+%             [RoiFileName, invDef, roi]=dtiCreateRoiFromMniNifti(dt6File, ROI_img_file, invDef, true);
+%             % Default is to use the spm normalization unless a superior
+%             % ANTS normalization was passed in
+%             if exist('antsInvWarp','var') && ~isempty(antsInvWarp)
+%                 outfile = fullfile(fileparts(dt6File),'ROIs',moriRois{roiID, 2});
+%                 roi2(roiID) = ANTS_CreateRoiFromMniNifti(ROI_img_file, antsInvWarp, [], outfile);
+%             else
+%                 [RoiFileName, invDef, roi2(roiID)]=dtiCreateRoiFromMniNifti(dt6File, ROI_img_file, invDef, true);
+%             end   
+%         else
+%             RoiFileName=fullfile(fileparts(dt6File), 'ROIs',  [prefix(prefix(ROI_img_file, 'short'), 'short') '.mat']);
+%            roi2(roiID) = dtiReadRoi(RoiFileName);
+             roi2(roiID) = dtiImportRoiFromNifti(ROI_img_file);
+             RoiFileName=fullfile(fileparts(dt6File), 'ROIs',  [prefix(prefix(moriRois{roiID, 2}, 'short'), 'short') '.mat']);
+             dtiWriteRoi(roi1(roiID), RoiFileName)
+%        end
         %To speed up the function, we intersect with the second ROI not all the
         %fibers, but only those that passed first ROI.
         fgCopy.fibers=fg.fibers(keepID1(keepID1>0));
