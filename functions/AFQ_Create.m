@@ -334,8 +334,8 @@ afq.overwrite.vals = zeros(AFQ_get(afq,'num subs'),1);
 
 
 % For some reason it is not going inside this loop, at least when testing in black the docker container
-% if AFQ_get(afq,'use mrtrix')
-    if true
+%if AFQ_get(afq,'use mrtrix')
+if true
     disp('use mrtrix is true')
     for ii = 1:AFQ_get(afq,'num subs')
         mrtrixdir = fullfile(afq.sub_dirs{ii},'mrtrix');
